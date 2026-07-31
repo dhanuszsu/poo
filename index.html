@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>poo பூ — a hand-tracking flower garden</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bgA:        #FFD6EC;
+    --bgB:        #FF9CD4;
+    --bgC:        #FF6FBF;
+    --paper:      #FFF3FA;
+    --ink:        #8A0B52;      /* dark pink font colour */
+    --ink-deep:   #6A0740;
+    --hot:        #FF2D95;
+    --hot-deep:   #D6006D;
+    --bubble:     #FFB3DD;
+    --bubble2:    #FF74BF;
+    --chrome1:    #FFE9F5;
+    --chrome2:    #FF4FB0;
+    --line:       rgba(138,11,82,0.16);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: linear-gradient(160deg, var(--bgA) 0%, var(--bgB) 55%, var(--bgC) 100%);
+    font-family: 'Quicksand', sans-serif;
+    color: var(--ink);
+    overflow:hidden;
+  }
+
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.35), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(255,79,176,0.25), transparent 45%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .stage{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    z-index:1;
+  }
+
+  .deco{
+    position:absolute;
+    opacity:0.85;
+    pointer-events:none;
+    z-index:1;
+    filter: drop-shadow(0 2px 4px rgba(138,11,82,0.15));
+  }
+
+  /* ---------- header ---------- */
+  .eyebrow-wrap{
+    position:absolute;
+    top: 4.5vh;
+    left:50%;
+    transform: translateX(-50%);
+    text-align:center;
+    z-index:5;
+  }
+  .eyebrow{
+    font-family:'Quicksand', sans-serif;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color: var(--hot-deep);
+    margin-bottom:4px;
+  }
+  .title-row{
+    display:flex; align-items:baseline; justify-content:center; gap:16px;
+    flex-wrap:wrap;
+  }
+  .title{
+    font-family:'Fredoka', sans-serif;
+    font-weight:700;
+    font-size: clamp(46px, 7vw, 78px);
+    margin:0;
+    background: linear-gradient(100deg, #D6006D 0%, #FF2D95 25%, #FF74BF 45%, #FF2D95 65%, #D6006D 100%);
+    background-size:220% auto;
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    animation:shimmer 5s linear infinite;
+    text-shadow:0 2px 18px rgba(255,45,149,.35);
+}
+  @keyframes shimmer{
+    0%{ background-position: 0% center; }
+    100%{ background-position: -220% center; }
+  }
+  .title-tamil{
+    font-family:'Noto Sans Tamil', 'Latha', 'Vijaya', 'Nirmala UI', sans-serif;
+    font-weight:700;
+    font-size: clamp(30px, 4.6vw, 48px);
+    color: rgb(99, 2, 44);
+  }
+  .subtitle{
+    font-size:13px;
+    color: var(--ink-deep);
+    opacity:0.75;
+    margin-top:2px;
+    letter-spacing:0.02em;
+  }
+
+  /* ---------- pinned photo card ---------- */
+  .pin-card{
+    position:relative;
+    width:min(78vw, 860px);
+    aspect-ratio: 4 / 3;
+    background: var(--paper);
+    border-radius: 26px;
+    padding:14px;
+    box-shadow:
+      0 2px 4px rgba(138,11,82,0.10),
+      0 24px 55px rgba(214,0,109,0.30),
+      0 2px 40px rgba(255,45,149,0.10);
+    transform: rotate(-0.6deg);
+    z-index:3;
+    border: 3px solid #FFFFFF;
+  }
+
+  .frame{
+    position:relative;
+    width:100%; height:100%;
+    border-radius:18px;
+    overflow:hidden;
+    background:#3a2030;
+  }
+
+  canvas#overlay{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+  }
+
+  video#cam{ display:none; }
+
+  .tape{
+    position:absolute;
+    width:78px; height:28px;
+    opacity:0.95;
+    z-index:6;
+    border-radius:2px;
+    box-shadow: 0 2px 6px rgba(138,11,82,0.2);
+  }
+  .tape.tl{ top:-13px; left:34px; transform: rotate(-8deg);
+    background: repeating-linear-gradient(135deg, #FF8FCB, #FF8FCB 6px, #FFD1EA 6px, #FFD1EA 12px); }
+  .tape.br{ bottom:-13px; right:34px; transform: rotate(6deg);
+    background: repeating-linear-gradient(135deg, #FF4FB0, #FF4FB0 6px, #FFA9D9 6px, #FFA9D9 12px); }
+
+  /* ---------- status chip ---------- */
+  .status-wrap{
+    position:absolute;
+    bottom: 6vh;
+    left:50%; transform:translateX(-50%);
+    z-index:5;
+  }
+  .chip{
+    font-family:'Quicksand', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:10px 20px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--chrome1) 60%, var(--bubble) 100%);
+    border:1px solid rgba(255,255,255,0.8);
+    color: var(--ink);
+    box-shadow: 0 6px 18px rgba(214,0,109,0.25), inset 0 1px 0 rgba(255,255,255,0.9);
+    display:flex; align-items:center; gap:9px;
+    transition: all .25s ease;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%;
+    background: var(--line);
+    transition: background .2s ease, transform .2s ease;
+  }
+  .chip.point .dot{ background: #FF2D95; transform:scale(1.35); box-shadow:0 0 8px #FF2D95; }
+  .chip.open  .dot{ background: #D6006D; transform:scale(1.35); box-shadow:0 0 8px #D6006D; }
+
+  /* ---------- sticky notes ---------- */
+  .note{
+    position:absolute;
+    top:7vh; right:5vw;
+    width:205px;
+    background: #FFE3F2;
+    border-radius:8px;
+    padding:16px 16px 20px;
+    box-shadow: 0 12px 28px rgba(214,0,109,0.25);
+    transform: rotate(4deg);
+    font-family:'Quicksand', sans-serif;
+    font-size:13px;
+    font-weight:500;
+    line-height:1.55;
+    color: var(--ink-deep);
+    z-index:6;
+  }
+  .note b{ font-family:'Fredoka', sans-serif; font-size:16px; font-weight:600; display:block; margin-bottom:6px; color: var(--hot-deep); }
+
+  .note.left{
+    left:5vw; right:auto;
+    top:auto; bottom:9vh;
+    transform: rotate(-3deg);
+    background:#FFD1EA;
+  }
+
+  @media (max-width: 900px){
+    .note{ display:none; }
+    .pin-card{ width:92vw; }
+  }
+
+  /* ---------- start overlay ---------- */
+  .start-layer{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:20px;
+    background: linear-gradient(160deg, rgba(255,214,236,0.96) 0%, rgba(255,156,212,0.96) 100%);
+    z-index:20;
+    text-align:center;
+    padding:20px;
+  }
+  .start-layer p{
+    max-width:420px;
+    font-size:15px;
+    line-height:1.6;
+    color: var(--ink-deep);
+    margin:0;
+    font-weight:500;
+  }
+  .btn{
+    font-family:'Fredoka', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.02em;
+    background: linear-gradient(180deg, #FF74BF 0%, #FF2D95 55%, #D6006D 100%);
+    color: #fff;
+    border:none;
+    padding:15px 34px;
+    border-radius:999px;
+    cursor:pointer;
+    box-shadow: 0 10px 26px rgba(214,0,109,0.45), inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .btn:hover{ transform: translateY(-2px); box-shadow: 0 14px 32px rgba(214,0,109,0.55), inset 0 1px 0 rgba(255,255,255,0.7); }
+  .btn:disabled{ opacity:0.6; cursor:default; transform:none; }
+
+  .credit{
+    position:absolute;
+    bottom:2vh; left:50%; transform:translateX(-50%);
+    font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color: rgba(138,11,82,0.55);
+    font-weight:600;
+    z-index:5;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <svg class="deco" style="top:8%; left:5%; width:64px;" viewBox="0 0 100 100">
+    <g><path d="M50 90 C 50 60, 42 55, 50 30" fill="none" stroke="#FF4FB0" stroke-width="3"/>
+    <circle cx="50" cy="22" r="8" fill="#D6006D"/>
+    <ellipse cx="50" cy="8" rx="9" ry="15" fill="#FF8FCB"/><ellipse cx="64" cy="14" rx="9" ry="15" fill="#FF74BF" transform="rotate(72 64 14)"/><ellipse cx="64" cy="30" rx="9" ry="15" fill="#FFB3DD" transform="rotate(144 64 30)"/><ellipse cx="36" cy="30" rx="9" ry="15" fill="#FF74BF" transform="rotate(216 36 30)"/><ellipse cx="36" cy="14" rx="9" ry="15" fill="#FF8FCB" transform="rotate(288 36 14)"/></g>
+  </svg>
+
+  <svg class="deco" style="bottom:9%; right:7%; width:56px;" viewBox="0 0 100 100">
+    <g><path d="M50 90 C 50 60, 58 55, 50 30" fill="none" stroke="#D6006D" stroke-width="3"/>
+    <circle cx="50" cy="22" r="7" fill="#FF2D95"/>
+    <ellipse cx="50" cy="8" rx="8" ry="13" fill="#FFD1EA"/><ellipse cx="63" cy="14" rx="8" ry="13" fill="#FFB3DD" transform="rotate(72 63 14)"/><ellipse cx="63" cy="30" rx="8" ry="13" fill="#FF8FCB" transform="rotate(144 63 30)"/><ellipse cx="37" cy="30" rx="8" ry="13" fill="#FFB3DD" transform="rotate(216 37 30)"/><ellipse cx="37" cy="14" rx="8" ry="13" fill="#FFD1EA" transform="rotate(288 37 14)"/></g>
+  </svg>
+
+  <svg class="deco" style="top:13%; right:9%; width:38px;" viewBox="0 0 24 24">
+    <path fill="#FFFFFF" d="M12 0l2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/>
+  </svg>
+  <svg class="deco" style="bottom:16%; left:10%; width:26px;" viewBox="0 0 24 24">
+    <path fill="#FFE3F2" d="M12 0l2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/>
+  </svg>
+
+  <div class="eyebrow-wrap">
+    <div class="eyebrow">hand-tracking · MediaPipe</div>
+    <div class="title-row">
+      <h1 class="title">poo</h1>
+      <span class="title-tamil">பூ</span>
+    </div>
+  </div>
+
+  <div class="pin-card">
+    <div class="tape tl"></div>
+    <div class="tape br"></div>
+    <div class="frame">
+      <video id="cam" playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>point ☝️</b>
+    Extend your index finger, keep the rest curled — a flower blooms wherever your fingertip lingers.
+  </div>
+
+  <div class="note left">
+    <b>release 🖐️</b>
+    Open your whole hand, fingers spread — every flower you've grown scatters into the breeze.
+  </div>
+
+  <div class="status-wrap">
+    <div class="chip" id="chip"><span class="dot"></span><span id="chipText">waiting for hand…</span></div>
+  </div>
+
+  <div class="credit">a little garden, grown by hand</div>
+
+  <div class="start-layer" id="startLayer">
+    <div class="eyebrow">before we begin</div>
+    <div class="title-row">
+      <h1 class="title" style="font-size: clamp(30px,4.5vw,44px);">wake the camera</h1>
+    </div>
+    <p>This runs entirely in your browser — nothing is recorded or sent anywhere. Grant camera access, then point and open your hand to grow and scatter flowers.</p>
+    <button class="btn" id="startBtn">turn on camera</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<script>
+(function(){
+  const video   = document.getElementById('cam');
+  const canvas  = document.getElementById('overlay');
+  const ctx     = canvas.getContext('2d');
+  const chip    = document.getElementById('chip');
+  const chipTxt = document.getElementById('chipText');
+  const startLayer = document.getElementById('startLayer');
+  const startBtn = document.getElementById('startBtn');
+
+  let W = 0, H = 0;
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    W = canvas.width  = rect.width  * devicePixelRatio;
+    H = canvas.height = rect.height * devicePixelRatio;
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------------- flower garden state (Y2K glossy pink flowers) ----------------
+  const PALETTE = [
+
+{ deep:'#FF4FA0', mid:'#FF92C9', light:'#FFEAF5' },
+
+{ deep:'#D63384', mid:'#FF7AB8', light:'#FFD9EC' },
+
+{ deep:'#FF85C2', mid:'#FFC2E3', light:'#FFF3FA' },
+
+{ deep:'#C9184A', mid:'#FF4D8D', light:'#FFD6E8' },
+
+{ deep:'#E75480', mid:'#FF9FC9', light:'#FFF0F8' },
+
+];
+  let flowers = [];
+  let petals = [];
+  let butterflies = [];
+  let lastSpawn = { x:-999, y:-999, t:0 };
+  const MAX_FLOWERS = 70;
+  const BLOOM_MS = 380;
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function spawnFlower(x,y){
+
+    if (flowers.length >= MAX_FLOWERS)
+        flowers.shift();
+
+    const flowerTypes = [
+        "rose",
+        "sakura",
+        "daisy",
+        "tulip",
+        "lotus",
+        "peony",
+        "hibiscus",
+        "marigold",
+        "jasmine",
+        "orchid",
+        "sunflower"
+    ];
+
+    flowers.push({
+
+        x,
+        y,
+
+        born:performance.now(),
+
+        scale:0,
+
+        rot:rand(-0.5,0.5),
+
+        petals:5+Math.floor(rand(0,4)),
+
+        size:rand(0.85,1.35)*Math.min(W,H)*0.055,
+
+        pal:PALETTE[Math.floor(rand(0,PALETTE.length))],
+
+        sparkle:Math.random()<0.75,
+
+        scattering:false,
+
+        vx:0,
+        vy:0,
+
+        life:1,
+
+        type:flowerTypes[Math.floor(Math.random()*flowerTypes.length)]
+
+    });
+
+}
+  function scatterAll(cx, cy){
+    flowers.forEach(f=>{
+      if (f.scattering) return;
+      f.scattering = true;
+      const dx = f.x - cx, dy = f.y - cy;
+      const dist = Math.hypot(dx,dy) || 1;
+      const speed = rand(2.5, 6) * (W/900);
+      f.vx = (dx/dist) * speed + rand(-1,1);
+      f.vy = (dy/dist) * speed + rand(-1,1) - rand(1,3);
+      f.spin = rand(-0.12,0.12);
+      for(let i=0;i<10;i++){
+
+    petals.push({
+
+        x:f.x,
+
+        y:f.y,
+
+        vx:rand(-2.5,2.5),
+
+        vy:rand(-3,1),
+
+        rot:rand(0,Math.PI*2),
+
+        life:1
+
+    });
+
+}
+    });
+  }
+
+  function drawSparkle(x, y, s, alpha){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(0,-s); ctx.lineTo(s*0.22,-s*0.22); ctx.lineTo(s,0);
+    ctx.lineTo(s*0.22,s*0.22); ctx.lineTo(0,s); ctx.lineTo(-s*0.22,s*0.22);
+    ctx.lineTo(-s,0); ctx.lineTo(-s*0.22,-s*0.22); ctx.closePath();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.shadowBlur = 22;
+    ctx.shadowColor = "rgba(255,255,255,0.45)";
+    ctx.restore();
+  }
+
+  function drawFlower(f, now){
+
+    const age = (now - f.born) / BLOOM_MS;
+    f.scale = Math.min(age, 1);
+
+    if (f.scattering){
+      f.x += f.vx;
+      f.y += f.vy;
+      f.vy += 0.12;              // gravity
+      f.rot += (f.spin || 0);
+      f.life -= 0.018;
+    }
+
+    ctx.save();
+
+    ctx.globalAlpha = f.scattering ? Math.max(f.life, 0) : 1;
+    ctx.translate(f.x, f.y);
+    ctx.rotate(f.rot);
+    ctx.scale(f.scale, f.scale);
+
+    const s = f.size;
+
+    switch(f.type){
+
+        case "rose":
+            drawRose(s);
+            break;
+
+        case "sakura":
+            drawSakura(s);
+            break;
+
+        case "daisy":
+            drawDaisy(s);
+            break;
+
+        case "tulip":
+            drawTulip(s);
+            break;
+
+        case "lotus":
+            drawLotus(s);
+            break;
+
+        case "peony":
+            drawPeony(s);
+            break;
+
+        case "hibiscus":
+            drawHibiscus(s);
+            break;
+
+        case "marigold":
+            drawMarigold(s);
+            break;
+
+        case "jasmine":
+            drawJasmine(s);
+            break;
+
+        case "orchid":
+            drawOrchid(s);
+            break;
+
+        case "sunflower":
+            drawSunflower(s);
+            break;
+
+        default:
+            drawDaisy(s);
+    }
+
+    // centre
+    const centre = ctx.createRadialGradient(0,0,1,0,0,s*0.18);
+    centre.addColorStop(0,"#FFF9B0");
+    centre.addColorStop(1,"#FFD84D");
+
+    ctx.fillStyle = centre;
+
+    ctx.beginPath();
+    ctx.arc(0,0,s*0.18,0,Math.PI*2);
+    ctx.fill();
+
+    // sparkles
+    if(f.sparkle){
+
+        ctx.fillStyle="rgba(255,255,255,.75)";
+
+        for(let i=0;i<6;i++){
+
+            const a=i*Math.PI/3;
+            const r=s*0.65;
+
+            ctx.beginPath();
+            ctx.arc(
+                Math.cos(a)*r,
+                Math.sin(a)*r,
+                2,
+                0,
+                Math.PI*2
+            );
+
+            ctx.fill();
+
+        }
+
+    }
+
+    ctx.restore();
+
+}
+  function drawRose(s){
+
+    const layers=[1,0.78,0.55];
+
+    for(let l=0;l<layers.length;l++){
+
+        const scale=layers[l];
+
+        for(let i=0;i<10;i++){
+
+            ctx.save();
+
+            ctx.rotate((Math.PI*2/10)*i+l*0.25);
+
+            const g=ctx.createRadialGradient(
+                0,-s*0.22*scale,
+                2,
+                0,-s*0.22*scale,
+                s*0.38*scale
+            );
+
+            g.addColorStop(0,"#FFE6F3");
+            g.addColorStop(1,"#FF4FA0");
+
+            ctx.fillStyle=g;
+
+            ctx.beginPath();
+            ctx.ellipse(
+                0,
+                -s*0.22*scale,
+                s*0.18*scale,
+                s*0.34*scale,
+                0,
+                0,
+                Math.PI*2
+            );
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+    }
+
+}
+function drawSakura(s){
+
+    for(let i=0;i<5;i++){
+
+        ctx.save();
+
+        ctx.rotate(i*Math.PI*2/5);
+
+        const g=ctx.createRadialGradient(
+            0,
+            -s*0.30,
+            2,
+            0,
+            -s*0.30,
+            s*0.32
+        );
+
+        g.addColorStop(0,"#FFF9FC");
+        g.addColorStop(1,"#FFB7D8");
+
+        ctx.fillStyle=g;
+
+        ctx.beginPath();
+
+        ctx.moveTo(0,0);
+
+        ctx.bezierCurveTo(
+            s*0.12,-s*0.12,
+            s*0.22,-s*0.42,
+            0,-s*0.48
+        );
+
+        ctx.bezierCurveTo(
+            -s*0.22,-s*0.42,
+            -s*0.12,-s*0.12,
+            0,0
+        );
+
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+}
+function drawDaisy(s){
+
+    for(let i=0;i<16;i++){
+
+        ctx.save();
+
+        ctx.rotate(i*Math.PI*2/16);
+
+        ctx.fillStyle="#FFFFFF";
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            -s*0.38,
+            s*0.08,
+            s*0.25,
+            0,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+}
+function drawTulip(s){
+
+    const g = ctx.createLinearGradient(0,-s*0.5,0,s*0.3);
+    g.addColorStop(0,"#FFB3D9");
+    g.addColorStop(1,"#FF4F95");
+
+    ctx.fillStyle = g;
+
+    ctx.beginPath();
+
+    ctx.moveTo(0,-s*0.5);
+
+    ctx.bezierCurveTo(
+        s*0.22,-s*0.42,
+        s*0.30,-s*0.08,
+        0,s*0.22
+    );
+
+    ctx.bezierCurveTo(
+        -s*0.30,-s*0.08,
+        -s*0.22,-s*0.42,
+        0,-s*0.5
+    );
+
+    ctx.fill();
+
+}
+function drawLotus(s){
+
+    for(let layer=0; layer<2; layer++){
+
+        const scale = layer===0 ? 1 : 0.7;
+
+        for(let i=0;i<8;i++){
+
+            ctx.save();
+
+            ctx.rotate(i*Math.PI/4 + layer*0.2);
+
+            const g = ctx.createRadialGradient(
+                0,-s*0.28*scale,
+                2,
+                0,-s*0.28*scale,
+                s*0.30*scale
+            );
+
+            g.addColorStop(0,"#FFF8FC");
+            g.addColorStop(1,"#FF9DD0");
+
+            ctx.fillStyle = g;
+
+            ctx.beginPath();
+
+            ctx.moveTo(0,0);
+
+            ctx.quadraticCurveTo(
+                s*0.15*scale,
+                -s*0.18*scale,
+                0,
+                -s*0.48*scale
+            );
+
+            ctx.quadraticCurveTo(
+                -s*0.15*scale,
+                -s*0.18*scale,
+                0,
+                0
+            );
+
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+    }
+
+}
+function drawPeony(s){
+
+    for(let layer=0; layer<3; layer++){
+
+        const scale = 1 - layer*0.22;
+
+        for(let i=0;i<12;i++){
+
+            ctx.save();
+
+            ctx.rotate(i*Math.PI/6 + layer*0.15);
+
+            const g = ctx.createRadialGradient(
+                0,-s*0.22*scale,
+                2,
+                0,-s*0.22*scale,
+                s*0.26*scale
+            );
+
+            g.addColorStop(0,"#FFE8F4");
+            g.addColorStop(1,"#FF5FA8");
+
+            ctx.fillStyle = g;
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                0,
+                -s*0.22*scale,
+                s*0.10*scale,
+                s*0.26*scale,
+                0,
+                0,
+                Math.PI*2
+            );
+
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+    }
+
+}
+function drawHibiscus(s){
+
+    for(let i=0;i<5;i++){
+
+        ctx.save();
+
+        ctx.rotate(i*Math.PI*2/5);
+
+        const g = ctx.createRadialGradient(
+            0,-s*0.30,
+            2,
+            0,-s*0.30,
+            s*0.42
+        );
+
+        g.addColorStop(0,"#FFF0F8");
+        g.addColorStop(0.55,"#FF4FA0");
+        g.addColorStop(1,"#C9184A");
+
+        ctx.fillStyle = g;
+
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.bezierCurveTo(s*0.30,-s*0.10, s*0.30,-s*0.45, 0,-s*0.52);
+        ctx.bezierCurveTo(-s*0.30,-s*0.45, -s*0.30,-s*0.10, 0,0);
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+    // long pistil, a hibiscus signature
+    ctx.save();
+    ctx.strokeStyle = "#FF8FCB";
+    ctx.lineWidth = Math.max(1.5, s*0.03);
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(0,-s*0.7);
+    ctx.stroke();
+
+    ctx.fillStyle = "#FFD84D";
+    for(let i=0;i<5;i++){
+        const a = i*Math.PI*2/5;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a)*s*0.05, -s*0.7 + Math.sin(a)*s*0.05, s*0.035, 0, Math.PI*2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+}
+function drawMarigold(s){
+
+    for(let layer=0; layer<4; layer++){
+
+        const scale = 1 - layer*0.18;
+
+        for(let i=0;i<10;i++){
+
+            ctx.save();
+
+            ctx.rotate(i*Math.PI*2/10 + layer*0.16);
+
+            const g = ctx.createLinearGradient(0,0,0,-s*0.4*scale);
+            g.addColorStop(0,"#FFB000");
+            g.addColorStop(1,"#FF7A1A");
+
+            ctx.fillStyle = g;
+
+            ctx.beginPath();
+            ctx.moveTo(-s*0.07*scale,0);
+            ctx.quadraticCurveTo(0,-s*0.42*scale, s*0.07*scale,0);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+    }
+
+}
+function drawJasmine(s){
+
+    // small, delicate 5-petal white star cluster
+    const offsets = [
+        {x:0,y:0}, {x:-s*0.32,y:-s*0.10}, {x:s*0.32,y:-s*0.10},
+        {x:-s*0.18,y:s*0.22}, {x:s*0.18,y:s*0.22}
+    ];
+
+    offsets.forEach(o=>{
+
+        ctx.save();
+        ctx.translate(o.x,o.y);
+
+        for(let i=0;i<5;i++){
+
+            ctx.save();
+            ctx.rotate(i*Math.PI*2/5);
+
+            ctx.fillStyle = "#FFFDF8";
+
+            ctx.beginPath();
+            ctx.ellipse(0,-s*0.14,s*0.045,s*0.14,0,0,Math.PI*2);
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+        ctx.fillStyle = "#FFE59A";
+        ctx.beginPath();
+        ctx.arc(0,0,s*0.045,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+
+    });
+
+}
+function drawOrchid(s){
+
+    for(let i=0;i<5;i++){
+
+        ctx.save();
+
+        ctx.rotate(i*Math.PI*2/5);
+
+        const g = ctx.createRadialGradient(
+            0,-s*0.30, 2,
+            0,-s*0.30, s*0.36
+        );
+
+        g.addColorStop(0,"#FFF6FB");
+        g.addColorStop(1, i===0 ? "#B347C2" : "#E58FD8");
+
+        ctx.fillStyle = g;
+
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.bezierCurveTo(s*0.20,-s*0.16, s*0.16,-s*0.46, 0,-s*0.5);
+        ctx.bezierCurveTo(-s*0.16,-s*0.46, -s*0.20,-s*0.16, 0,0);
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+    // magenta throat marking
+    ctx.fillStyle = "#B347C2";
+    ctx.beginPath();
+    ctx.ellipse(0,-s*0.10,s*0.09,s*0.14,0,0,Math.PI*2);
+    ctx.fill();
+
+}
+function drawSunflower(s){
+
+    for(let i=0;i<14;i++){
+
+        ctx.save();
+
+        ctx.rotate(i*Math.PI*2/14);
+
+        const g = ctx.createLinearGradient(0,0,0,-s*0.55);
+        g.addColorStop(0,"#FFC93C");
+        g.addColorStop(1,"#FF9500");
+
+        ctx.fillStyle = g;
+
+        ctx.beginPath();
+        ctx.moveTo(-s*0.06,0);
+        ctx.lineTo(0,-s*0.55);
+        ctx.lineTo(s*0.06,0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+    // dark seeded centre, drawn a little larger than the shared centre dot
+    ctx.fillStyle = "#6A3B1A";
+    ctx.beginPath();
+    ctx.arc(0,0,s*0.16,0,Math.PI*2);
+    ctx.fill();
+
+}
+function spawnButterfly(){
+
+    butterflies.push({
+
+        x:-40,
+
+        y:rand(H*0.2,H*0.8),
+
+        vx:rand(1.5,3),
+
+        flap:rand(0,Math.PI*2),
+
+        size:rand(12,20)
+
+    });
+
+}
+function drawButterflies(now){
+
+    if(Math.random()<0.003){
+
+        spawnButterfly();
+
+    }
+
+    for(let i=butterflies.length-1;i>=0;i--){
+
+        const b=butterflies[i];
+
+        b.x+=b.vx;
+
+        b.flap+=0.25;
+
+        if(b.x>W+50){
+
+            butterflies.splice(i,1);
+
+            continue;
+
+        }
+
+        ctx.save();
+
+        ctx.translate(b.x,b.y);
+
+        const wing=Math.sin(b.flap)*6;
+
+        ctx.fillStyle="#FFC8E8";
+
+        ctx.beginPath();
+
+        ctx.ellipse(-wing,0,8,12,0,0,Math.PI*2);
+
+        ctx.fill();
+
+        ctx.beginPath();
+
+        ctx.ellipse(wing,0,8,12,0,0,Math.PI*2);
+
+        ctx.fill();
+
+        ctx.fillStyle="#5E335A";
+
+        ctx.fillRect(-1,-10,2,20);
+
+        ctx.restore();
+
+    }
+
+}
+  function drawPetals(){
+    for(let i=petals.length-1;i>=0;i--){
+      const p = petals[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.rot += 0.08;
+      p.life -= 0.02;
+
+      if (p.life <= 0){
+        petals.splice(i,1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = "#FF9FC9";
+      ctx.beginPath();
+      ctx.ellipse(0,0,4,7,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function pruneFlowers(){
+    flowers = flowers.filter(f => !(f.scattering && f.life <= 0));
+  }
+
+  // ---------------- gesture detection ----------------
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function fingerExtended(lm, tip, pip, wrist){
+    return dist(wrist, lm[tip]) > dist(wrist, lm[pip]) * 1.12;
+  }
+
+  function classify(lm){
+    const wrist = lm[0];
+    const index  = fingerExtended(lm, 8, 6, wrist);
+    const middle = fingerExtended(lm, 12, 10, wrist);
+    const ring   = fingerExtended(lm, 16, 14, wrist);
+    const pinky  = fingerExtended(lm, 20, 18, wrist);
+
+    if (index && middle && ring && pinky) return 'open';
+    if (index && !middle && !ring && !pinky) return 'point';
+    return 'idle';
+  }
+
+  let currentGesture = 'idle';
+
+  function setChip(state){
+    chip.classList.remove('point','open');
+    if (state === 'point'){ chip.classList.add('point'); chipTxt.textContent = 'blooming…'; }
+    else if (state === 'open'){ chip.classList.add('open'); chipTxt.textContent = 'scattering'; }
+    else { chipTxt.textContent = 'waiting for hand…'; }
+  }
+
+  // ---------------- MediaPipe wiring ----------------
+  const hands = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+  });
+  hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.6
+  });
+  hands.onResults(onResults);
+
+  function onResults(results){
+    if (!W) resize();
+    ctx.save();
+    ctx.clearRect(0,0,W,H);
+    ctx.translate(W,0);
+    ctx.scale(-1,1);
+
+    if (results.image){
+      ctx.drawImage(results.image, 0, 0, W, H);
+    }
+
+    const now = performance.now();
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length){
+      const lm = results.multiHandLandmarks[0];
+      const gesture = classify(lm);
+      currentGesture = gesture;
+
+      const tip = lm[8];
+      const px = tip.x * W, py = tip.y * H;
+
+      if (gesture === 'point'){
+        const moved = Math.hypot(px - lastSpawn.x, py - lastSpawn.y);
+        if (moved > W*0.02 && now - lastSpawn.t > 90){
+          spawnFlower(px, py);
+          lastSpawn = { x: px, y: py, t: now };
+        }
+      } else if (gesture === 'open'){
+        const cx = lm[9].x * W, cy = lm[9].y * H;
+        scatterAll(cx, cy);
+      }
+    } else {
+      currentGesture = 'idle';
+    }
+
+    drawButterflies(now);
+    flowers.forEach(f => drawFlower(f, now));
+    drawPetals();
+    pruneFlowers();
+
+    ctx.restore();
+    setChip(currentGesture);
+  }
+
+  // ---------------- start / camera permission ----------------
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    startBtn.textContent = 'opening camera…';
+
+    if (!window.isSecureContext){
+      startBtn.disabled = false;
+      startBtn.textContent = 'turn on camera';
+      alert('Camera access needs a secure context (https:// or localhost). Please open this page over HTTPS.');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      startBtn.disabled = false;
+      startBtn.textContent = 'turn on camera';
+      alert('This browser does not support camera access. Please try a recent version of Chrome, Edge, or Safari.');
+      return;
+    }
+    if (typeof Hands === 'undefined' || typeof Camera === 'undefined'){
+      startBtn.disabled = false;
+      startBtn.textContent = 'turn on camera';
+      alert('Hand-tracking libraries failed to load. Check your internet connection and reload the page.');
+      return;
+    }
+
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio:false });
+      video.srcObject = stream;
+      await video.play();
+      resize();
+
+      const camera = new Camera(video, {
+        onFrame: async () => { await hands.send({ image: video }); },
+        width: 960, height: 720
+      });
+      camera.start();
+
+      startLayer.style.display = 'none';
+    } catch(err){
+      startBtn.disabled = false;
+      startBtn.textContent = 'turn on camera';
+      alert('Camera access was blocked or unavailable. Please allow camera permissions and try again.\n\n' + err.message);
+    }
+  });
+
+  window.addEventListener('load', resize);
+})();
+</script>
+
+</body>
+</html>
