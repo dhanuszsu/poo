@@ -57,8 +57,7 @@ This project works great on **GitHub Pages** since it needs no backend:
 
 1. Go to **Settings → Pages** in your repo
 2. Set branch to `main`, folder to `/ (root)`
-3. Your site will be live at `https://your-username.github.io/flower-garden/`
-
+3. Your site will be live at https://github.com/dhanuszsu/poo.git
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
