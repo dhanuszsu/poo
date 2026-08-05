@@ -30,20 +30,6 @@ Open `index.html` in your browser, allow camera access, and start growing flower
 - A webcam
 - HTTPS or `localhost` (required for camera access)
 
-### Installation
-
-```bash
-git clone https://github.com/your-username/flower-garden.git
-cd flower-garden
-```
-
-Then just open `index.html` in your browser — or serve it locally:
-
-```bash
-python3 -m http.server 8000
-```
-
-and visit `http://localhost:8000`.
 
 ### Usage
 
